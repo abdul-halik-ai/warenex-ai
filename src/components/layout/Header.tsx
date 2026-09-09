@@ -1,19 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Play, Pause, Zap, CheckCircle2, AlertTriangle, User, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, Play, Pause, Zap, CheckCircle2, AlertTriangle, User, RefreshCw, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { signOut, useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
 export function Header() {
   const { data: session } = useSession();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [isSimRunning, setIsSimRunning] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const demoSteps = [
     { title: "1. Inbound Truck TR-881 Docking", desc: "Shipment arrived at Receiving Dock with 240 units.", status: "DONE" },
@@ -84,7 +91,7 @@ export function Header() {
 
   return (
     <>
-      <header className="flex h-14 items-center gap-3 border-b bg-white px-4 lg:h-[62px] lg:px-6 dark:bg-slate-950">
+      <header className="flex h-14 items-center gap-3 border-b border-slate-200 bg-white/95 backdrop-blur-xs px-4 lg:h-[62px] lg:px-6 dark:border-slate-850 dark:bg-slate-950/95">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
@@ -92,12 +99,12 @@ export function Header() {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
             <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">FACILITY:</span>
-            <Badge variant="outline" className="font-mono text-xs bg-slate-50 dark:bg-slate-900 border-slate-300">
+            <Badge variant="outline" className="font-mono text-xs bg-indigo-50/60 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800">
               WH-01 CHICAGO HUB
             </Badge>
           </div>
-          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 text-xs hidden sm:inline-flex">
-            SYSTEM LIVE • 18ms
+          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 text-xs hidden sm:inline-flex font-mono">
+            LIVE • 18ms
           </Badge>
         </div>
 
@@ -105,11 +112,11 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           {/* Simulation Controls */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
             <Button
               size="sm"
               variant={isSimRunning ? "destructive" : "secondary"}
-              className="h-7 text-xs px-2.5 gap-1"
+              className="h-7 text-xs px-2.5 gap-1 shadow-2xs"
               onClick={handleToggleSimulation}
             >
               {isSimRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
@@ -118,7 +125,7 @@ export function Header() {
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 text-xs px-2 gap-1"
+              className="h-7 text-xs px-2 gap-1 text-slate-600 dark:text-slate-300"
               onClick={handleStepSimulation}
               title="Step single telemetry tick"
             >
@@ -130,38 +137,61 @@ export function Header() {
           {/* One-Click Demo Button */}
           <Button
             size="sm"
-            className="h-8 bg-blue-600 hover:bg-blue-700 text-white gap-1.5 shadow-sm font-medium text-xs"
+            className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-xs font-medium text-xs transition-colors"
             onClick={handleRunDemo}
           >
             <Zap className="h-3.5 w-3.5 fill-current" />
             Run Warehouse Demo
           </Button>
 
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 relative">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 relative hover:bg-slate-100 dark:hover:bg-slate-850">
             <Bell className="h-4 w-4" />
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500" />
           </Button>
 
+          {/* Light / Dark Theme Switcher */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-850"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title={mounted && theme === "dark" ? "Switch to Light Theme" : "Switch to Dark Theme"}
+          >
+            {mounted && theme === "dark" ? (
+              <Sun className="h-4 w-4 text-amber-500 transition-all" />
+            ) : (
+              <Moon className="h-4 w-4 text-indigo-600 dark:text-indigo-400 transition-all" />
+            )}
+          </Button>
+
           {/* User Profile */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-2 border border-slate-200 h-8 px-2.5 rounded-md bg-white text-xs font-medium dark:bg-slate-900 cursor-pointer">
-              <div className="h-5 w-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
+            <DropdownMenuTrigger className="flex items-center gap-2 border border-slate-200 h-8 px-2.5 rounded-md bg-white text-xs font-medium dark:bg-slate-900 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors">
+              <div className="h-5 w-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">
                 {session?.user?.name?.[0] || "A"}
               </div>
               <span className="text-xs font-medium max-w-[120px] truncate hidden md:inline-block">
                 {session?.user?.name || "Admin"}
               </span>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-md">
               <DropdownMenuLabel>
-                <div className="font-semibold">{session?.user?.name || "Alex Vance"}</div>
+                <div className="font-semibold text-slate-900 dark:text-white">{session?.user?.name || "Alex Vance"}</div>
                 <div className="text-xs font-normal text-slate-500">{session?.user?.email || "admin@warenex.ai"}</div>
-                <Badge className="mt-1 text-[10px] bg-blue-100 text-blue-700 border-blue-200">
+                <Badge className="mt-1 text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300">
                   {(session?.user as any)?.role || "ADMIN"}
                 </Badge>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => signOut()}>
+              <DropdownMenuItem
+                onClick={() => { window.location.href = "/login"; }}
+                className="cursor-pointer text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center justify-between"
+              >
+                <span>Switch Login Portal</span>
+                <span className="text-[10px]">&rarr;</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer text-xs text-rose-600">
                 Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>

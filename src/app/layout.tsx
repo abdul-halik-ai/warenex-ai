@@ -17,8 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} h-screen w-full overflow-hidden bg-white text-slate-950 dark:bg-slate-950 dark:text-slate-50`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} h-screen w-full overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50`}>
         <Providers>
           {children}
           <Toaster />

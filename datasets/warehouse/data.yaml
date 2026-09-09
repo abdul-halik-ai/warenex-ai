@@ -1,0 +1,9 @@
+path: C:/Users/VIGNESHWARAN S/HASTAG/warenex-ai/datasets/warehouse
+train: images/train
+val: images/val
+names:
+  0: box
+  1: damaged_package
+  2: worker
+  3: empty_bin
+  4: forklift
