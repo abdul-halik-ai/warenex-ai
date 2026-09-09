@@ -1,0 +1,309 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  WAREHOUSE_MANAGER
+  SUPERVISOR
+  OPERATOR
+  VIEWER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  auditLogs AuditLog[]
+}
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String
+  location  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  zones     Zone[]
+}
+
+model Zone {
+  id          String   @id @default(cuid())
+  warehouseId String
+  name        String
+  type        String   // e.g., Receiving, Storage, Cold Storage
+  capacity    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  racks       Rack[]
+  sensors     Sensor[]
+  alerts      Alert[]
+}
+
+model Rack {
+  id        String   @id @default(cuid())
+  zoneId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  zone      Zone      @relation(fields: [zoneId], references: [id])
+  shelves   Shelf[]
+}
+
+model Shelf {
+  id        String   @id @default(cuid())
+  rackId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rack      Rack     @relation(fields: [rackId], references: [id])
+  bins      Bin[]
+}
+
+model Bin {
+  id        String   @id @default(cuid())
+  shelfId   String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shelf     Shelf    @relation(fields: [shelfId], references: [id])
+  inventory Inventory[]
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  name          String
+  category      String
+  supplier      String?
+  cost          Float?
+  sellingPrice  Float?
+  weight        Float?   // in kg
+  dimensions    String?  // L x W x H
+  status        ProductStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  inventory     Inventory[]
+  movements     InventoryMovement[]
+  orderItems    OrderItem[]
+  anomalies     Anomaly[]
+  damageReports DamageReport[]
+}
+
+enum InventoryStatus {
+  AVAILABLE
+  RESERVED
+  PICKED
+  PACKED
+  DISPATCHED
+  DAMAGED
+  MISSING
+  QUARANTINED
+  EXPIRED
+}
+
+model Inventory {
+  id               String   @id @default(cuid())
+  productId        String
+  binId            String
+  quantity         Int      @default(0)
+  reservedQuantity Int      @default(0)
+  status           InventoryStatus @default(AVAILABLE)
+  batchNumber      String?
+  serialNumber     String?
+  expiryDate       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  product          Product  @relation(fields: [productId], references: [id])
+  bin              Bin      @relation(fields: [binId], references: [id])
+}
+
+model InventoryMovement {
+  id          String   @id @default(cuid())
+  productId   String
+  fromBinId   String?
+  toBinId     String?
+  quantity    Int
+  workerId    String?
+  type        String   // e.g., PUTAWAY, PICK, TRANSFER, ADJUSTMENT
+  reason      String?
+  timestamp   DateTime @default(now())
+
+  product     Product  @relation(fields: [productId], references: [id])
+  worker      Worker?  @relation(fields: [workerId], references: [id])
+}
+
+enum OrderStatus {
+  RECEIVED
+  ALLOCATED
+  PICKING
+  PICKED
+  PACKING
+  PACKED
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id        String   @id @default(cuid())
+  customer  String
+  priority  String   @default("NORMAL")
+  status    OrderStatus @default(RECEIVED)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pickedAt  DateTime?
+  packedAt  DateTime?
+  dispatchedAt DateTime?
+
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  pickedQuantity Int @default(0)
+
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Worker {
+  id        String   @id @default(cuid())
+  userId    String?  @unique
+  badgeId   String   @unique
+  name      String
+  role      String
+  status    String   @default("OFFLINE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movements InventoryMovement[]
+  activities WorkerActivity[]
+}
+
+model WorkerActivity {
+  id        String   @id @default(cuid())
+  workerId  String
+  zoneId    String?
+  taskType  String   // e.g., PICKING, PUTAWAY, AUDIT
+  startTime DateTime @default(now())
+  endTime   DateTime?
+  status    String   @default("IN_PROGRESS")
+
+  worker    Worker   @relation(fields: [workerId], references: [id])
+}
+
+model Sensor {
+  id           String   @id @default(cuid())
+  zoneId       String
+  type         String   // e.g., TEMPERATURE, HUMIDITY
+  unit         String
+  thresholdMin Float?
+  thresholdMax Float?
+  status       String   @default("ONLINE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  zone         Zone     @relation(fields: [zoneId], references: [id])
+  readings     SensorReading[]
+}
+
+model SensorReading {
+  id        String   @id @default(cuid())
+  sensorId  String
+  value     Float
+  timestamp DateTime @default(now())
+
+  sensor    Sensor   @relation(fields: [sensorId], references: [id])
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+}
+
+model Alert {
+  id          String   @id @default(cuid())
+  type        String
+  severity    AlertSeverity
+  title       String
+  description String
+  zoneId      String?
+  status      AlertStatus @default(OPEN)
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+
+  zone        Zone?    @relation(fields: [zoneId], references: [id])
+}
+
+model Anomaly {
+  id          String   @id @default(cuid())
+  type        String   // MISPLACED_ITEM, STOCK_MISMATCH
+  riskScore   Int
+  evidence    String
+  productId   String?
+  detectedAt  DateTime @default(now())
+  status      String   @default("UNRESOLVED")
+
+  product     Product? @relation(fields: [productId], references: [id])
+}
+
+model DamageReport {
+  id          String   @id @default(cuid())
+  productId   String
+  damageType  String
+  severity    String
+  confidence  Float
+  imageUrl    String?
+  reportedAt  DateTime @default(now())
+
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entity      String
+  entityId    String
+  prevValue   String?
+  newValue    String?
+  timestamp   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+}
